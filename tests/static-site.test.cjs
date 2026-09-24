@@ -12,6 +12,10 @@ test('public static page offers a local JSON file import', () => {
   assert.match(js, /parseImportedProfile/);
 });
 
+test('tablet layout lets the privacy notice use available width', () => {
+  assert.match(html, /@media \(max-width:850px\)[^\n]*\.privacy-near-action \{[^}]*max-width:none/);
+});
+
 test('public static app does not send imported data to an API or persist in localStorage', () => {
   assert.doesNotMatch(js, /fetch\(/);
   assert.doesNotMatch(js, /localStorage\./);
