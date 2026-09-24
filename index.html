@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Household Coast FIRE Calculator</title>
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: #f4f1e8;
+    --panel: rgba(255,255,255,.82);
+    --ink: #17201b;
+    --muted: #667067;
+    --line: #d7d5ca;
+    --accent: #176b4d;
+    --accent-soft: #d8eee4;
+    --warn: #9a5b13;
+    --shadow: 0 16px 40px rgba(28,42,34,.09);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#101612; --panel:#18211b; --ink:#ecf4ee; --muted:#9ba9a0; --line:#344139; --accent:#75d6ad; --accent-soft:#173e2e; --warn:#f2bd71; --shadow:none; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: var(--bg); color: var(--ink); }
+  main { width: min(1180px, calc(100% - 32px)); margin: 28px auto 64px; }
+  header { display:flex; justify-content:space-between; gap:24px; align-items:flex-end; margin-bottom:22px; }
+  header > div { min-width:0; max-width:100%; }
+  h1 { margin:0; font-size:clamp(30px, 5vw, 54px); letter-spacing:-.045em; line-height:.95; }
+  h2 { margin:0 0 14px; font-size:17px; }
+  p { line-height:1.5; }
+  .eyebrow { color:var(--accent); text-transform:uppercase; letter-spacing:.12em; font-size:12px; font-weight:800; margin-bottom:10px; }
+  .intro { max-width:660px; margin:12px 0 0; color:var(--muted); }
+  .toolbar { display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end; }
+  .import-button { display:inline-flex; align-items:center; border:1px solid var(--accent); border-radius:999px; background:var(--accent); color:var(--bg); padding:9px 13px; cursor:pointer; font-size:13px; font-weight:750; position:relative; }
+  .import-button:focus-within { outline:2px solid var(--accent); outline-offset:2px; }
+  .import-button input { position:absolute; width:1px; height:1px; opacity:0; margin:0; padding:0; }
+  button { border:1px solid var(--line); border-radius:999px; background:var(--panel); color:var(--ink); padding:9px 13px; cursor:pointer; font-weight:700; max-width:100%; }
+  button:hover, button:focus-visible { border-color:var(--accent); outline:none; }
+  button.primary { background:var(--accent); color:var(--bg); border-color:var(--accent); }
+  .status-grid { display:grid; grid-template-columns:repeat(4, minmax(0,1fr)); gap:12px; margin-bottom:18px; }
+  .card, .panel { background:var(--panel); border:1px solid var(--line); box-shadow:var(--shadow); border-radius:18px; }
+  .card { padding:18px; min-height:128px; }
+  .card .label { color:var(--muted); font-size:12px; font-weight:750; text-transform:uppercase; letter-spacing:.08em; }
+  .card .value { font-size:clamp(25px,3vw,39px); font-weight:850; letter-spacing:-.04em; margin:11px 0 4px; }
+  .card .detail { color:var(--muted); font-size:13px; }
+  .card.good { border-color:var(--accent); background:var(--accent-soft); }
+  .layout { display:grid; grid-template-columns:minmax(0, 1.08fr) minmax(330px, .92fr); gap:18px; align-items:start; }
+  .panel { padding:20px; }
+  .input-section + .input-section { border-top:1px solid var(--line); margin-top:22px; padding-top:20px; }
+  .section-head { display:flex; justify-content:space-between; gap:16px; align-items:baseline; margin-bottom:12px; }
+  .section-head p { margin:0; color:var(--muted); font-size:12px; }
+  .fields { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; }
+  label { display:block; font-size:12px; font-weight:750; color:var(--muted); }
+  input { width:100%; margin-top:6px; border:1px solid var(--line); border-radius:10px; background:transparent; color:var(--ink); padding:10px 11px; font:inherit; font-variant-numeric:tabular-nums; }
+  input:focus { border-color:var(--accent); outline:2px solid color-mix(in srgb, var(--accent) 20%, transparent); }
+  .unit { position:relative; }
+  .unit span { position:absolute; right:11px; bottom:11px; color:var(--muted); font-size:12px; pointer-events:none; }
+  .unit input { padding-right:42px; }
+  select { width:100%; margin-top:6px; border:1px solid var(--line); border-radius:10px; background:transparent; color:var(--ink); padding:10px 11px; font:inherit; }
+  select:focus { border-color:var(--accent); outline:2px solid color-mix(in srgb, var(--accent) 20%, transparent); }
+  .scenario-row { display:flex; gap:8px; flex-wrap:wrap; margin:2px 0 16px; }
+  .scenario-row button { font-size:12px; padding:7px 10px; }
+  .results-list { display:grid; gap:0; }
+  .result-row { display:flex; justify-content:space-between; gap:18px; padding:13px 0; border-bottom:1px solid var(--line); }
+  .result-row:last-child { border-bottom:0; }
+  .result-row span:first-child { color:var(--muted); }
+  .result-row strong { text-align:right; font-variant-numeric:tabular-nums; }
+  #schedule-table { width:100%; border-collapse:collapse; font-size:12px; font-variant-numeric:tabular-nums; }
+  #schedule-table th, #schedule-table td { padding:5px 6px; border-bottom:1px solid var(--line); text-align:right; white-space:nowrap; }
+  #schedule-table th:first-child, #schedule-table td:first-child { text-align:left; }
+  .schedule-block { margin-top:18px; }
+  .schedule-block h2 { font-size:14px; }
+  .bar-group { margin:20px 0 6px; }
+  .bar-label { display:flex; justify-content:space-between; font-size:12px; margin:10px 0 6px; color:var(--muted); }
+  .bar { height:12px; border-radius:999px; overflow:hidden; background:color-mix(in srgb, var(--line) 70%, transparent); }
+  .bar > div { height:100%; min-width:2px; max-width:100%; border-radius:inherit; background:var(--accent); transition:width .2s ease; }
+  .notes { margin-top:18px; padding:15px 17px; border-radius:14px; border:1px solid var(--line); background:color-mix(in srgb, var(--panel) 70%, transparent); }
+  .notes h2 { font-size:14px; }
+  .notes ul { margin:0; padding-left:18px; color:var(--muted); font-size:13px; line-height:1.5; }
+  .error { display:none; margin-bottom:14px; color:var(--warn); font-weight:700; }
+  .banner { display:none; margin-bottom:14px; padding:12px 15px; border-radius:14px; border:1px solid color-mix(in srgb, var(--warn) 45%, transparent); background:color-mix(in srgb, var(--warn) 9%, transparent); color:var(--warn); font-size:13px; font-weight:650; line-height:1.5; }
+  .banner button { margin-left:10px; font-size:12px; padding:6px 11px; }
+  .notice { display:none; margin-bottom:12px; padding:10px 14px; border-radius:12px; border:1px solid var(--line); background:color-mix(in srgb, var(--panel) 70%, transparent); color:var(--muted); font-size:13px; font-weight:600; line-height:1.5; }
+  #result-warnings { display:none; margin-bottom:16px; padding:13px 16px; border-radius:14px; border:1px solid color-mix(in srgb, var(--warn) 45%, transparent); background:color-mix(in srgb, var(--warn) 9%, transparent); }
+  #result-warnings h2 { font-size:13px; color:var(--warn); margin:0 0 8px; }
+  #result-warnings ul { margin:0; padding-left:18px; color:var(--warn); font-size:13px; line-height:1.5; }
+  .card.invalid { border-color:color-mix(in srgb, var(--warn) 55%, transparent); }
+  .card.invalid .value { color:var(--warn); }
+  .qualifier { color:var(--muted); font-size:12.5px; margin:-6px 0 18px; line-height:1.5; }
+  button:disabled { opacity:.45; cursor:not-allowed; }
+  button:disabled:hover { border-color:var(--line); }
+  .fine-print { color:var(--muted); font-size:12px; margin-top:18px; }
+  .source-line { margin:-6px 0 16px; color:var(--muted); font-size:12px; }
+  details { border-top:1px solid var(--line); margin-top:18px; padding-top:16px; }
+  details > summary { cursor:pointer; font-weight:800; font-size:14px; }
+  details > summary::marker { color:var(--accent); }
+  details > summary span { color:var(--muted); font-size:12px; font-weight:600; margin-left:7px; }
+  details[open] > summary { margin-bottom:14px; }
+  .help { display:inline-flex; width:18px; height:18px; margin-left:4px; align-items:center; justify-content:center; border:1px solid var(--line); border-radius:50%; background:transparent; color:var(--accent); font-size:11px; font-weight:850; vertical-align:middle; cursor:pointer; padding:0; }
+  .help:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
+  .help-copy { display:none; grid-column:1 / -1; margin:-4px 0 2px; padding:9px 11px; border-left:3px solid var(--accent); background:color-mix(in srgb, var(--accent-soft) 70%, transparent); color:var(--muted); font-size:12px; line-height:1.45; }
+  .help-copy.is-open { display:block; }
+  .advanced-fields { margin-top:12px; }
+  .privacy-near-action { max-width:270px; margin:7px 0 0 auto; color:var(--warn); font-size:11px; line-height:1.35; }
+  .table-scroll { overflow-x:auto; border:1px solid var(--line); border-radius:10px; }
+  .field-note { margin:0 0 12px; color:var(--muted); font-size:12px; line-height:1.45; }
+  .is-hidden { display:none; }
+  @media (max-width:850px) { .status-grid { grid-template-columns:repeat(2,1fr); } .layout { grid-template-columns:1fr; } header { align-items:flex-start; flex-direction:column; } .toolbar { justify-content:flex-start; } .privacy-near-action { margin-left:0; } }
+  @media (max-width:520px) { main { width:min(100% - 20px,1180px); margin-top:18px; overflow-wrap:anywhere; } .status-grid, .fields { grid-template-columns:1fr; } .card { min-height:105px; } .toolbar { width:100%; } .toolbar button { white-space:normal; text-align:left; } .section-head { align-items:flex-start; flex-direction:column; } .section-head p, .intro, .banner, .privacy-near-action, .card .label, .card .detail, details > summary { overflow-wrap:anywhere; } }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <div>
+      <div class="eyebrow">Private, on-device import · public calculator code</div>
+      <h1>Coast FIRE,<br>with the house included.</h1>
+      <p class="intro">See whether your entered portfolio clears a month-by-month household plan, alongside a strict portfolio-only benchmark.</p>
+    </div>
+    <div>
+      <div class="toolbar">
+        <label class="import-button" for="import-json">Import financial JSON<input id="import-json" type="file" accept=".json,application/json" aria-label="Import financial JSON from this device"></label>
+        <button id="export-json">Download JSON</button>
+        <button id="reset" class="primary" title="Discards edits and restores the imported file's values; after reload, reimport the file.">Reset to imported values</button>
+      </div>
+      <p class="privacy-near-action"><strong>No upload:</strong> your file is read on this device only. Values live in this tab's memory and disappear on reload. Do not share exported JSON or screenshots casually.</p>
+    </div>
+  </header>
+
+  <div id="defaults-banner" class="banner"><span id="defaults-banner-text"></span><button id="defaults-retry">Retry loading defaults</button></div>
+  <div id="error" class="error" role="alert" tabindex="-1"></div>
+  <div id="storage-notice" class="notice"></div>
+  <div id="payload-notice" class="notice"></div>
+  <section class="status-grid" aria-live="polite">
+    <div class="card" id="adjusted-status-card"><div class="label">Household scenario (month-indexed)</div><div class="value" id="adjusted-status">—</div><div class="detail" id="adjusted-gap">—</div></div>
+    <div class="card" id="strict-status-card"><div class="label" id="strict-card-label">Portfolio-only benchmark (entered spending)</div><div class="value" id="strict-status">—</div><div class="detail" id="strict-gap">—</div></div>
+    <div class="card"><div class="label">Projected at retirement</div><div class="value" id="projected-portfolio">—</div><div class="detail" id="contribution-detail">—</div></div>
+    <div class="card"><div class="label">Mortgage payoff</div><div class="value" id="payoff-age">—</div><div class="detail" id="mortgage-balance-retirement">—</div></div>
+  </section>
+  <p class="qualifier">“Meets deterministic assumptions” only means these inputs clear modeled targets. It is not financial clearance or evidence that work can stop.</p>
+  <p class="source-line" id="source-summary" aria-live="polite">Checking input source…</p>
+
+  <div class="layout">
+    <section class="panel">
+      <div class="input-section">
+        <div class="section-head"><h2>Portfolio and timeline</h2><p>Today's dollars — returns and contributions</p></div>
+        <div class="fields">
+          <label>Current household investments<div class="unit"><input data-field="currentInvestments" type="number" min="0" step="100"><span>$</span></div></label>
+          <label>Annual contributions until Coast age<div class="unit"><input data-field="annualContributions" type="number" min="0" step="100"><span>$</span></div></label>
+          <label>Current age<div class="unit"><input data-field="currentAge" type="number" min="18" max="100" step="0.01"><span>yrs</span></div></label>
+          <label>Stop contributing at age<div class="unit"><input data-field="coastAge" type="number" min="18" max="100" step="0.01"><span>yrs</span></div></label>
+          <label>Retirement (stop-work) age<div class="unit"><input data-field="retirementAge" type="number" min="18" max="100" step="1"><span>yrs</span></div></label>
+          <label>Plan through age <button class="help" type="button" data-help-target="horizon-help" aria-controls="horizon-help" aria-expanded="false" aria-label="Explain plan horizon">?</button><div class="unit"><input data-field="horizonAge" type="number" min="18" max="120" step="0.01"><span>yrs</span></div></label>
+          <label>Terminal portfolio target <button class="help" type="button" data-help-target="terminal-help" aria-controls="terminal-help" aria-expanded="false" aria-label="Explain terminal portfolio target">?</button><div class="unit"><input data-field="terminalBalanceTarget" type="number" min="0" step="1000"><span>$</span></div></label>
+          <label>Real investment return<div class="unit"><input data-field="realReturn" data-percent type="number" min="-99" max="20" step="0.1"><span>%</span></div></label>
+          <label>Inflation assumption<div class="unit"><input data-field="inflationRate" data-percent type="number" min="0" max="20" step="0.1"><span>%</span></div></label>
+          <p id="horizon-help" class="help-copy" hidden>The horizon is a terminal planning assumption, not a life-expectancy estimate. The model checks every month through this age.</p>
+          <p id="terminal-help" class="help-copy" hidden>Today’s dollars. Enter $0 for no bequest target; this is added to the funding floor at the selected horizon.</p>
+        </div>
+        <details id="work-cash-details" class="advanced-fields">
+          <summary>Pre-retirement cash-flow screen <span id="work-cash-details-summary">Optional — not assessed</span></summary>
+          <p class="field-note">A simple annual screen only; enter both values to assess cash flow while coasting. It does not replace a tax or monthly cash-flow model.</p>
+          <div class="fields">
+            <label>Annual work income while coasting<div class="unit"><input data-field="workIncomeAnnual" type="number" min="0" step="100"><span>$</span></div></label>
+            <label>Annual spending while coasting<div class="unit"><input data-field="coastPeriodSpendingAnnual" type="number" min="0" step="100"><span>$</span></div></label>
+          </div>
+        </details>
+      </div>
+
+      <details id="account-details" class="input-section">
+        <summary>Account access check <span id="account-details-summary">Optional — add a split to check the bridge</span></summary>
+        <p class="field-note">Optional. These amounts must equal household investments. The model flags accessibility but does not model exceptions or penalties.</p>
+        <div class="fields">
+          <label>Taxable / accessible now<div class="unit"><input data-field="investmentsTaxableAccessible" type="number" min="0" step="100"><span>$</span></div></label>
+          <label>Tax-advantaged before access age (traditional IRA / 401k)<div class="unit"><input data-field="investmentsTaxAdvantagedPreAccess" type="number" min="0" step="100"><span>$</span></div></label>
+          <label>Roth or basis (contributions)<div class="unit"><input data-field="investmentsRothOrBasis" type="number" min="0" step="100"><span>$</span></div></label>
+          <label>Tax-advantaged access age you expect (blank = access not assessed)<div class="unit"><input data-field="taxAdvantagedAccessAge" type="number" min="18" max="100" step="1"><span>yrs</span></div></label>
+        </div>
+      </details>
+
+      <div class="input-section">
+        <div class="section-head"><h2>Retirement spending</h2><p>Today's dollars, after-tax consumption.</p></div>
+        <div class="fields">
+          <label>Consumption — food, transport, insurance, everything you buy (not savings or transfers)<div class="unit"><input data-field="consumptionAnnual" type="number" min="0" step="100"><span>$</span></div></label>
+          <label>Personal housing — housing costs not already charged to the property module<div class="unit"><input data-field="personalHousingAnnual" type="number" min="0" step="100"><span>$</span></div></label>
+          <label>Healthcare before Medicare (eligibility generally begins at 65)<div class="unit"><input data-field="healthcarePreMedicareAnnual" type="number" min="0" step="100"><span>$</span></div></label>
+          <label>Healthcare at/after Medicare (65+)<div class="unit"><input data-field="healthcarePostMedicareAnnual" type="number" min="0" step="100"><span>$</span></div></label>
+          <label>Annual household spending total <button class="help" type="button" data-help-target="spending-total-help" aria-controls="spending-total-help" aria-expanded="false" aria-label="Explain household spending total">?</button><div class="unit"><input data-field="retirementSpendingAnnual" type="number" min="0" step="500"><span>$</span></div></label>
+          <p id="spending-total-help" class="help-copy" hidden>After-tax consumption total: consumption + personal housing + post-Medicare healthcare. Savings and transfers are excluded.</p>
+        </div>
+        <details id="spending-details" class="advanced-fields">
+          <summary>Tax, memos &amp; optional allowances <span id="spending-details-summary">No additional allowance or memo entered</span></summary>
+          <p class="field-note">The tax allowance is added to the funding floor, not inside spending; this calculator does not compute tax. Property operations belong either here as a memo or in the rental module, never both.</p>
+          <div class="fields">
+            <label>Income-tax allowance <button class="help" type="button" data-help-target="tax-help" aria-controls="tax-help" aria-expanded="false" aria-label="Explain tax allowance">?</button><div class="unit"><input data-field="retirementTaxAllowance" type="number" min="0" step="100"><span>$</span></div></label>
+            <label>Property operations memo<div class="unit"><input data-field="propertyOperationsAnnual" type="number" min="0" step="100"><span>$</span></div></label>
+            <label>Savings and transfers memo<div class="unit"><input data-field="savingsTransfersAnnual" type="number" min="0" step="100"><span>$</span></div></label>
+            <p id="tax-help" class="help-copy" hidden>Annual amount, in today’s dollars. This is a user-entered allowance only: no tax engine, rental-tax calculation, bracket, or withdrawal tax calculation is modeled.</p>
+          </div>
+        </details>
+      </div>
+
+      <div class="input-section">
+        <div class="section-head"><h2>Benefit income</h2><p>Benefits are today-dollar estimates at each claiming age; convert future-dollar estimates before entering them.</p></div>
+        <div class="scenario-row">
+          <button data-scenario="base">Household base</button>
+          <button data-scenario="strict">No rent + no benefits (property retained)</button>
+          <button data-scenario="both-units">Both units rented (hypothetical)</button>
+        </div>
+        <div class="fields">
+          <label>Withdrawal rate<div class="unit"><input data-field="withdrawalRate" data-percent type="number" min="0.1" max="20" step="0.1"><span>%</span></div></label>
+          <label>Member 1 annual benefit<div class="unit"><input data-field="member1AnnualBenefit" type="number" min="0" step="100"><span>$</span></div></label>
+          <label>Member 1 claiming age<div class="unit"><input data-field="member1ClaimingAge" type="number" min="62" max="70" step="1"><span>yrs</span></div></label>
+          <label>Member 2 annual benefit<div class="unit"><input data-field="member2AnnualBenefit" type="number" min="0" step="100"><span>$</span></div></label>
+          <label>Member 2 claiming age<div class="unit"><input data-field="member2ClaimingAge" type="number" min="62" max="70" step="1"><span>yrs</span></div></label>
+          <label>Additional benefit haircut<div class="unit"><input data-field="socialSecurityHaircut" data-percent type="number" min="0" max="100" step="1"><span>%</span></div></label>
+        </div>
+        <details id="legacy-benefit-details" class="advanced-fields">
+          <summary>Legacy combined-benefit entry <span id="legacy-benefit-details-summary">Use only when both member claiming ages are empty</span></summary>
+          <p class="field-note">Per-member estimates are preferred. Use this legacy pair only when both individual claiming ages above are empty; the estimate must be today’s dollars at the entered claiming age. Future-dollar estimates are not converted or guessed.</p>
+          <div class="fields">
+            <label>Combined annual benefit <button class="help" type="button" data-help-target="benefit-basis-help" aria-controls="benefit-basis-help" aria-expanded="false" aria-label="Explain benefit dollar basis">?</button><div class="unit"><input data-field="socialSecurityAnnual" type="number" min="0" step="100"><span>$</span></div></label>
+            <label>Combined benefit claiming age<div class="unit"><input data-field="socialSecurityClaimingAge" type="number" min="62" max="70" step="1"><span>yrs</span></div></label>
+            <p id="benefit-basis-help" class="help-copy" hidden>Enter a today-dollar estimate at its claiming age. The model credits no benefit when timing or dollar basis is unknown; it does not inflate a future-dollar estimate back to today.</p>
+          </div>
+        </details>
+      </div>
+
+      <div class="input-section">
+        <div class="section-head"><h2>Mortgage and rental</h2><p>Rent is today's dollars and grows with inflation (set a real growth rate for more); mortgage terms are contractual/nominal, deflated by inflation; home equity is never counted as invested assets</p></div>
+        <div class="fields">
+          <label>Mortgage principal<div class="unit"><input data-field="mortgagePrincipal" type="number" min="0" step="100"><span>$</span></div></label>
+          <label>Mortgage rate<div class="unit"><input data-field="mortgageRate" data-percent type="number" min="0" max="30" step="0.01"><span>%</span></div></label>
+          <label>Monthly principal + interest<div class="unit"><input data-field="mortgagePrincipalInterestMonthly" type="number" min="0" step="1"><span>$</span></div></label>
+          <label>Monthly extra principal<div class="unit"><input data-field="extraPrincipalMonthly" type="number" min="0" step="1"><span>$</span></div></label>
+          <label>Monthly escrow<div class="unit"><input data-field="escrowMonthly" type="number" min="0" step="1"><span>$</span></div></label>
+          <label>Gross monthly rent today (grows with inflation)<div class="unit"><input data-field="grossRentMonthly" type="number" min="0" step="50"><span>$</span></div></label>
+          <label>Property management<div class="unit"><input data-field="managementRate" data-percent type="number" min="0" max="100" step="1"><span>%</span></div></label>
+          <label>Vacancy allowance<div class="unit"><input data-field="vacancyRate" data-percent type="number" min="0" max="100" step="1"><span>%</span></div></label>
+          <label>Maintenance + capital reserve<div class="unit"><input data-field="maintenanceRate" data-percent type="number" min="0" max="100" step="1"><span>%</span></div></label>
+        </div>
+        <details id="rental-details" class="advanced-fields">
+          <summary>Rental growth, stress &amp; property context <span id="rental-details-summary">No added reserve, stress event, or home-value context</span></summary>
+          <p class="field-note">Property costs are counted in the rental module. Do not also put them in personal housing or the spending memo. Home value is context only and is never invested assets.</p>
+          <div class="fields">
+            <label>Rent growth above inflation<div class="unit"><input data-field="rentGrowthReal" data-percent type="number" min="-99" max="100" step="0.1"><span>%/yr</span></div></label>
+            <label>Property reserve inside investments <button class="help" type="button" data-help-target="reserve-help" aria-controls="reserve-help" aria-expanded="false" aria-label="Explain property reserve treatment">?</button><div class="unit"><input data-field="propertyReserve" type="number" min="0" step="100"><span>$</span></div></label>
+            <label>One-time property event at retirement<div class="unit"><input data-field="propertyCapitalEventOneTime" type="number" min="0" step="100"><span>$</span></div></label>
+            <label>Owner-paid monthly utilities<div class="unit"><input data-field="ownerUtilitiesMonthly" type="number" min="0" step="25"><span>$</span></div></label>
+            <label>Estimated home value<div class="unit"><input data-field="homeValue" type="number" min="0" step="1000"><span>$</span></div></label>
+            <p id="reserve-help" class="help-copy" hidden>Enter only a reserve already included in household investments. It is excluded once from the investable portfolio; do not enter the same property cost in personal housing or the spending memo.</p>
+          </div>
+        </details>
+      </div>
+
+      <div class="input-section">
+        <div class="section-head"><h2>Housing scenario</h2><p>Default: the household occupies its own unit and the property's carrying costs stay in the rental module. Renting both units requires replacement housing to be named, priced, dated, and its moving costs entered.</p></div>
+        <div class="fields">
+          <label>Housing scenario <button class="help" type="button" data-help-target="housing-help" aria-controls="housing-help" aria-expanded="false" aria-label="Explain both-units housing requirements">?</button><select data-field="housingScenarioMode" data-text>
+            <option value="">Default — household occupies its own unit</option>
+            <option value="both-units-rented">Both units rented (needs replacement housing)</option>
+          </select></label>
+          <p id="housing-help" class="help-copy" hidden>Both units rented requires replacement housing to be named, priced, and dated; $0 rent requires a justification, and moving costs must be entered. The property’s carrying costs stay in the rental module.</p>
+          <div id="replacement-housing-fields" class="fields" style="grid-column:1 / -1">
+            <label>Replacement-housing assumption — name it (e.g. "rent a similar apartment nearby")<input data-field="housingReplacementAssumption" data-text type="text"></label>
+            <label>Replacement-housing rent (monthly, today's dollars; 0 needs a justification)<div class="unit"><input data-field="housingReplacementMonthly" type="number" min="0" step="50"><span>$</span></div></label>
+          <label>Replacement housing starts at age<div class="unit"><input data-field="housingReplacementStartAge" type="number" min="18" max="100" step="1"><span>yrs</span></div></label>
+          <label>One-time moving costs<div class="unit"><input data-field="housingMovingCostsOneTime" type="number" min="0" step="100"><span>$</span></div></label>
+          <label>Justification when the replacement rent above is 0<input data-field="housingReplacementJustification" data-text type="text"></label>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <aside class="panel">
+      <h2>What the model says</h2>
+      <div id="result-warnings"><h2>Restrictions and warnings</h2><ul id="result-warnings-list"></ul></div>
+      <div class="results-list">
+        <div class="result-row"><span>Household Coast number today</span><strong id="adjusted-coast-number">—</strong></div>
+        <div class="result-row"><span>Portfolio-only Coast number today</span><strong id="strict-coast-number">—</strong></div>
+        <div class="result-row"><span>Portfolio needed at retirement</span><strong id="adjusted-retirement-target">—</strong></div>
+        <div class="result-row"><span>Annual draw needed from portfolio</span><strong id="annual-portfolio-need">—</strong></div>
+        <div class="result-row"><span>Income-tax allowance</span><strong id="tax-allowance-line">—</strong></div>
+        <div class="result-row"><span>Bridge account access</span><strong id="account-access-line">—</strong></div>
+        <div class="result-row"><span>Housing scenario</span><strong id="housing-scenario-line">—</strong></div>
+        <div class="result-row"><span>Social Security credited (after haircut)</span><strong id="effective-ss">—</strong></div>
+        <div class="result-row"><span>Benefit start</span><strong id="benefit-starts">—</strong></div>
+        <div class="result-row"><span>Net rent at retirement</span><strong id="net-rent">—</strong></div>
+        <div class="result-row"><span>Net rent after mortgage payoff</span><strong id="net-rent-after-payoff">—</strong></div>
+        <div class="result-row"><span>Mortgage balance at retirement (nominal)</span><strong id="mortgage-at-retirement">—</strong></div>
+        <div class="result-row"><span>Estimated home equity today</span><strong id="home-equity">—</strong></div>
+        <div class="result-row"><span>Coast now — can future contributions stop?</span><strong id="coast-now-line">—</strong></div>
+        <div class="result-row"><span>Selected contribution schedule</span><strong id="on-track-line">—</strong></div>
+        <div class="result-row"><span>Earliest modeled Coast age</span><strong id="earliest-coast-line">—</strong></div>
+        <div class="result-row"><span>Pre-retirement cash-flow feasibility</span><strong id="coast-cash-flow-line">—</strong></div>
+      </div>
+
+      <div class="bar-group">
+        <div class="bar-label"><span>Current vs household Coast number</span><span id="adjusted-ratio">—</span></div><div class="bar"><div id="adjusted-bar"></div></div>
+        <div class="bar-label"><span>Current vs portfolio-only Coast number</span><span id="strict-ratio">—</span></div><div class="bar"><div id="strict-bar"></div></div>
+      </div>
+
+      <div id="bridge-summary" class="notice"></div>
+
+      <details id="provenance" class="notice">
+        <summary>Input source &amp; scenario <span id="provenance-summary">Loading source details…</span></summary>
+        <p class="fine-print" id="provenance-source"></p>
+        <p class="fine-print" id="provenance-staleness"></p>
+        <p class="fine-print" id="provenance-ledger"></p>
+        <p class="fine-print" id="provenance-scenario"></p>
+        <button id="rebase-defaults" disabled title="Rebase needs a loaded household defaults file.">Rebase sourced values to household defaults (keeps assumptions)</button>
+      </details>
+
+      <details class="schedule-block" id="schedule-details">
+        <summary>Retirement cash-flow schedule <span>Yearly rows; full monthly detail is in JSON export</span></summary>
+        <p class="fine-print">Rows use modeled age and month index; calendar years would need a birth year. Mortgage columns are nominal; other amounts are today’s dollars.</p>
+        <div class="table-scroll"><table id="schedule-table"></table></div>
+      </details>
+
+      <details class="notes" id="assumptions-details">
+        <summary>Assumptions &amp; limitations <span>How this deterministic model treats the inputs</span></summary><ul id="notes"></ul>
+      </details>
+      <p class="fine-print" id="assumptions-line"></p>
+      <p class="fine-print"><strong>Privacy:</strong> this static site makes no financial-data API calls and does not save inputs to browser storage. Import the file again after a reload. Download JSON explicitly if you need to save an edited scenario; protect that file like any financial record.</p>
+      <p class="fine-print">This is deterministic planning math, not a forecast. Income tax is one flat user-entered allowance (no tax engine); healthcare phases, spending components, and replacement housing are user-entered assumptions. Rental depreciation, sequence-of-returns risk, selling costs, and unplanned property expenses are not modeled.</p>
+    </aside>
+  </div>
+</main>
+<script src="coast-fire-model.js"></script>
+<script src="coast-fire-import.js"></script>
+<script src="coast-fire.js"></script>
+</body>
+</html>
